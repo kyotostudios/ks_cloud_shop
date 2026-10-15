@@ -27,6 +27,10 @@ function Manager.Handle(data, cb)
         cb(lib.callback.await('cloud-shop:manager:data', false))
         return true
     end
+    if action == 'manager:inventoryItems' then
+        cb(lib.callback.await('cloud-shop:manager:inventoryItems', false))
+        return true
+    end
     if action == 'manager:save' then
         local ok, reason = lib.callback.await('cloud-shop:manager:save', false, data.key, data.shop)
         cb({ success = ok, reason = reason })

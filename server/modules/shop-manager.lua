@@ -14,7 +14,28 @@ lib.callback.register('cloud-shop:getShops', function(source)
 end)
 lib.callback.register('cloud-shop:manager:data', function(source)
     if not permitted(source) then return nil end
-    return { shops = Registry.All(), template = Registry.Template() }
+    return { shops = Registry.All(), template = Registry.Template(), imagePath = Config.ImagePath }
+end)
+lib.callback.register('cloud-shop:manager:inventoryItems', function(source)
+    if not permitted(source) then return { success = false, reason = 'Sem permissão' } end
+    if GetResourceState('ox_inventory') ~= 'started' then
+        return { success = false, reason = 'O catálogo requer ox_inventory iniciado.' }
+    end
+    local success, items = pcall(function() return exports.ox_inventory:Items() end)
+    if not success or type(items) ~= 'table' then
+        return { success = false, reason = 'Falha ao consultar o catálogo do ox_inventory.' }
+    end
+    local result = {}
+    for name, item in pairs(items) do
+        if type(name) == 'string' and type(item) == 'table' then
+            result[#result + 1] = { name = name, label = type(item.label) == 'string' and item.label or name }
+        end
+    end
+    table.sort(result, function(a, b)
+        local la, lb = a.label:lower(), b.label:lower()
+        return la == lb and a.name < b.name or la < lb
+    end)
+    return { success = true, items = result }
 end)
 lib.callback.register('cloud-shop:manager:save', function(source, key, data)
     if not permitted(source) then return false, 'Sem permissão' end
