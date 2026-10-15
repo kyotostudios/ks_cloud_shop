@@ -23,6 +23,9 @@ import CategoryList from "@/components/CategoryList.vue"
 import ItemList from "@/components/ItemList.vue"
 import CartItems from "@/components/CartItems.vue"
 import CartPayment from "@/components/CartPayment.vue"
+import ShopManager from '@/components/ShopManager.vue'
+import { useManagerStore } from '@/stores/manager'
+const managerStore = useManagerStore()
 
 const devStyles = computed(() => {
   return {
@@ -38,6 +41,11 @@ const closeShop = (): void => {
 
 const handleKeyup = (event: KeyboardEvent): void => {
   if (event.key !== "Escape") return
+  if (managerStore.showManager) {
+    callback({ action: 'manager:close' })
+    managerStore.showManager = false
+    return
+  }
   closeShop()
 }
 
@@ -74,6 +82,7 @@ onBeforeUnmount(() => {
       </div>
     </main>
   </transition>
+  <ShopManager v-if="managerStore.showManager" />
 </template>
 
 <style scoped>

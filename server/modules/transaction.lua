@@ -1,100 +1,66 @@
--- Configuration
-local Config = require("config.main")
-local Functions = require("config.functions")
-
--- Locales
-local locales = lib.loadJson(("locales.%s"):format(Config.Locale))
-
----@param source number
----@param type string
----@param cartArray table
----@return boolean, string
-lib.callback.register("cloud-shop:processTransaction", function(source, type, cartArray)
-	if not source or source <= 0 then return false, "Invalid source" end
-	if not cartArray or #cartArray == 0 then return false, "Cart is empty or invalid" end
-
-	local currentShop = Player(source).state["currentShop"]
-	if not currentShop or not Config.Shops[currentShop] then return false, "Invalid shop state" end
-
-	local accountType = type == "bank" and "bank" or "cash"
-	local availableMoney = Bridge.GetMoney(source, accountType)
-	if availableMoney <= 0 then return false, "Not enough money" end
-
-	local shopItems = Config.Shops[currentShop].Items
-	if not shopItems then return false, "Invalid shop configuration" end
-
-	local validItems = {}
-	for i = 1, #shopItems do
-		local item = shopItems[i]
-		validItems[item.name] = item
-	end
-
-	local totalCartPrice = 0
-	local anySuccess = false
-
-	for i = 1, #cartArray do
-		local item = cartArray[i]
-
-		if not item or not item.name or not item.label or not item.price or not item.quantity then
-			log.warn("Invalid item in cart:" .. item.name)
-			goto skipItem
-		end
-
-		local configItem = validItems[item.name]
-		if not configItem then
-			log.warn("Non existent item in cart:" .. item.name)
-			goto skipItem
-		end
-
-		if item.quantity <= 0 or item.quantity > 999 then
-			log.warn(("Invalid quantity for item %s: %d"):format(item.name, item.quantity))
-			goto skipItem
-		end
-
-		if item.price ~= configItem.price then
-			log.warn(("Price mismatch for item %s: expected %d, got %d"):format(item.name, configItem.price, item.price))
-			goto skipItem
-		end
-
-		local totalItemPrice = item.price * item.quantity
-		if availableMoney < totalItemPrice then
-			Functions.Notify.Server(source, {
-				title = locales.notify.no_money.shop.title,
-				description = locales.notify.no_money.shop.description:format(item.label, item.price),
-				type = locales.notify.no_money.shop.type,
-			})
-			goto skipItem
-		end
-
-		local success, message = Bridge.AddItem(source, item.name, item.quantity)
-		log.debug("AddItem: " .. message)
-
-		if not success then
-			Functions.Notify.Server(source, {
-				title = locales.notify.cant_add.item.title,
-				description = locales.notify.cant_add.item.description:format(item.label),
-				type = locales.notify.cant_add.item.type,
-			})
-			goto skipItem
-		end
-
-		availableMoney = availableMoney - totalItemPrice
-		totalCartPrice = totalCartPrice + totalItemPrice
-		anySuccess = true
-
-		::skipItem::
-	end
-
-	if not anySuccess then return false, "No items could be purchased" end
-
-	local removed = Bridge.RemoveMoney(source, accountType, totalCartPrice)
-	if not removed then return false, "Failed to remove money from account" end
-
-	Functions.Notify.Server(source, {
-		title = locales.notify.payment_success.shop.title,
-		description = locales.notify.payment_success.shop.description:format(totalCartPrice),
-		type = locales.notify.payment_success.shop.type,
-	})
-
-	return true, ("Purchased items for $%d"):format(totalCartPrice)
+local Config = require('config.main')
+local Functions = require('config.functions')
+local Access = require('server.lib.shop_access')
+local locales = lib.loadJson(('locales.%s'):format(Config.Locale))
+local pending = {}
+lib.callback.register('cloud-shop:processTransaction', function(source, paymentType, cart)
+    if pending[source] then return false, 'Compra em andamento' end
+    pending[source] = true
+    local function process()
+        local shopKey = Player(source).state.currentShop
+        local allowed, shop = Access.Check(source, shopKey)
+        if not allowed then return false, shop end
+        if paymentType ~= 'cash' and paymentType ~= 'bank' then return false, 'Pagamento inválido' end
+        if type(cart) ~= 'table' or #cart == 0 or #cart > 100 then return false, 'Carrinho inválido' end
+        local catalog = {}
+        for _, item in ipairs(shop.Items or {}) do catalog[item.name] = item end
+        local valid, total, seen = {}, 0, {}
+        for _, line in ipairs(cart) do
+            if type(line) ~= 'table' or type(line.name) ~= 'string' or seen[line.name] then return false, 'Linha inválida' end
+            local product = catalog[line.name]
+            if not product then return false, 'Produto não encontrado' end
+            if type(line.quantity) ~= 'number' or line.quantity % 1 ~= 0 or line.quantity < 1 or line.quantity > 999 then return false, 'Quantidade inválida' end
+            if not Access.CheckItem(source, product) then
+                local name = product.license and product.license.type or 'desconhecida'
+                Functions.Notify.Server(source, { title = 'Licença necessária', description = 'Você precisa da licença ' .. name .. ' para comprar este produto.', type = 'error' })
+                return false, 'Licença exigida: ' .. name
+            end
+            seen[line.name] = true
+            total = total + product.price * line.quantity
+            if total > 100000000 then return false, 'Limite excedido' end
+            valid[#valid + 1] = { product = product, quantity = line.quantity }
+        end
+        if total < 0 then return false, 'Total inválido' end
+        if (Bridge.GetMoney(source, paymentType) or 0) < total then return false, 'Saldo insuficiente' end
+        if GetResourceState('ox_inventory') == 'started' then
+            for _, entry in ipairs(valid) do
+                if not exports.ox_inventory:CanCarryItem(source, entry.product.name, entry.quantity) then return false, 'Inventário cheio' end
+            end
+        end
+        -- Cobra primeiro. Uma falha no AddItem devolve o valor daquela linha.
+        -- Bloqueio evita carrinhos simultâneos do mesmo jogador.
+        local purchased = 0
+        local spent = 0
+        for _, entry in ipairs(valid) do
+            local cost = entry.product.price * entry.quantity
+            if cost > 0 and (Bridge.GetMoney(source, paymentType) or 0) < cost then break end
+            if cost > 0 and not Bridge.RemoveMoney(source, paymentType, cost) then break end
+            local ok, added = pcall(Bridge.AddItem, source, entry.product.name, entry.quantity)
+            if not ok or not added then
+                local refunded = cost == 0 or Bridge.AddMoney(source, paymentType, cost)
+                if not refunded then print(('[cloud-shop] CRITICAL refund failed for player %d, amount %d'):format(source, cost)) end
+            else
+                purchased = purchased + 1
+                spent = spent + cost
+            end
+        end
+        if purchased == 0 then return false, 'Nenhum produto comprado' end
+        Functions.Notify.Server(source, { title = locales.notify.payment_success.shop.title, description = locales.notify.payment_success.shop.description:format(spent), type = 'success' })
+        return true, ('Comprou %d produto(s) por $%d'):format(purchased, spent)
+    end
+    local ok, success, reason = pcall(process)
+    pending[source] = nil
+    if not ok then print('[cloud-shop] Erro em transação: ' .. tostring(success)); return false, 'Falha interna' end
+    return success, reason
 end)
+AddEventHandler('playerDropped', function() pending[source] = nil end)

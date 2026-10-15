@@ -1,0 +1,37 @@
+{
+  "ui": {
+    "currency": { "symbol": "$", "position": "before" },
+    "main": { "item": { "add_cart": "Adicionar ao carrinho" } },
+    "cart": { "payment": { "title": "Pagamento", "pay_bank": "Cartão", "pay_cash": "Dinheiro" } }
+  },
+  "interaction": {
+    "help_text": "~INPUT_CONTEXT~  Ver catálogo de produtos",
+    "floating_text": "~INPUT_CONTEXT~ Ver catálogo de produtos",
+    "target": { "icon": "fa-solid fa-cart-shopping", "label": "Ver catálogo de produtos" }
+  },
+  "dialog": {
+    "license": {
+      "header": "A licença **%s** é necessária para acessar esta loja!",
+      "content": "Deseja comprar a licença **%s** por **$%s**?"
+    }
+  },
+  "notify": {
+    "requirement": {
+      "job": { "title": "Requisito de acesso", "description": "É necessário ter o emprego **%s** para acessar esta loja!", "type": "warning" },
+      "job_grade": { "title": "Requisito de acesso", "description": "Seu cargo não atende ao requisito de acesso a esta loja.", "type": "warning" },
+      "license": { "title": "Requisito de acesso", "description": "É necessário ter a licença **%s** para acessar esta loja!", "type": "warning" }
+    },
+    "cant_add": {
+      "item": { "title": "Compra não realizada", "description": "Não foi possível comprar **%s**.", "type": "error" },
+      "weapon": { "title": "Restrição de transporte", "description": "Não é possível carregar mais unidades de **%s**.", "type": "error" }
+    },
+    "no_money": {
+      "shop": { "title": "Compra não realizada", "description": "Saldo insuficiente para comprar **%s** por **$%s**.", "type": "error" },
+      "license": { "title": "Compra não realizada", "description": "Saldo insuficiente para comprar **%s**.", "type": "error" }
+    },
+    "payment_success": {
+      "shop": { "title": "Compra concluída", "description": "Itens comprados com sucesso por **$%s**.", "type": "success" },
+      "license": { "title": "Compra concluída", "description": "Licença **%s** comprada com sucesso por **$%s**.", "type": "success" }
+    }
+  }
+}

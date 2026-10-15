@@ -69,7 +69,7 @@ end
 --- @param shopCoords vector4 -- The coordinates for the target zone
 --- @param openFunction function -- The function to open the shop
 local function addTarget(shopKey, shopData, shopCoords, openFunction)
-	exports.ox_target:addBoxZone({
+	return exports.ox_target:addBoxZone({
 		coords = shopCoords,
 		size = shopData.Interaction.Target.boxZoneSize,
 		drawSprite = shopData.Interaction.Target.drawSprite,

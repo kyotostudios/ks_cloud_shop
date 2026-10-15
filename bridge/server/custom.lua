@@ -148,3 +148,18 @@ lib.callback.register("cloud-shop:getJobData", function(source)
 
 	return Player.Job.name, Player.Job.grade
 end)
+
+function Bridge.AddMoney(source, accountType, amount)
+    local player = getPlayerObject(source)
+    if not player or amount <= 0 then return false end
+    return player.Money.Add(accountType, amount)
+end
+function Bridge.GetJob(source)
+    local player = getPlayerObject(source)
+    if not player then return nil end
+    return player.Job.name, tonumber(player.Job.grade) or 0
+end
+function Bridge.HasLicense(source, licenseType)
+    local player = getPlayerObject(source)
+    return player ~= nil and player.License.Has(licenseType) == true
+end

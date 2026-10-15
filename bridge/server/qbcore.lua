@@ -171,3 +171,26 @@ lib.callback.register("cloud-shop:getJobData", function(source)
 	-- Otherwise, use gang if exists, fallback to job
 	return gang.name ~= "none" and gang.label or job.name, gang.name ~= "none" and gang.grade.level or job.grade.level
 end)
+
+function Bridge.AddMoney(source, accountType, amount)
+    local player = getPlayerObject(source)
+    if not player or amount <= 0 then return false end
+    return player.Functions.AddMoney(accountType, amount) == true
+end
+function Bridge.GetJob(source)
+    local player = getPlayerObject(source)
+    if not player then return nil end
+    local job = player.PlayerData.job or { name = 'unemployed', grade = { level = 0 } }
+    local gang = player.PlayerData.gang
+    if gang and gang.name ~= 'none' and job.name == 'unemployed' then
+        return gang.name, tonumber(gang.grade.level or gang.grade) or 0
+    end
+    return job.name, tonumber(job.grade.level or job.grade) or 0
+end
+function Bridge.HasLicense(source, licenseType)
+    local player = getPlayerObject(source)
+    if not player then return false end
+    local metadata = player.PlayerData.metadata or {}
+    local licenses = metadata.licences or metadata.licenses or {}
+    return licenses[licenseType] == true
+end

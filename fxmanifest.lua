@@ -22,7 +22,6 @@ server_scripts {
     "bridge/server/*.lua",
     "server/utils/*.lua",
     "server/modules/*.lua",
-    "server/*.lua",
 }
 
 client_scripts {
@@ -34,6 +33,7 @@ client_scripts {
 files {
     "web/dist/**/*",
     "config/*.lua",
+    "server/lib/*.lua",
     "locales/*.json",
     "client/modules/*.lua",
 }

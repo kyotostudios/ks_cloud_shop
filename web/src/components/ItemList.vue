@@ -48,7 +48,7 @@ const addToCart = (name: string): void => {
         </div>
         <div class="info">
           <div class="item-label">{{ item.label }}</div>
-          <div class="item-price">{{ formatPrice(item.price) }}</div>
+          <div class="item-price">{{ formatPrice(item.price) }}<span v-if="item.license?.required" title="Requer licença" class="license-mark"> | LICENÇA</span></div>
         </div>
         <div class="add-to-cart" @click="addToCart(item.name)">{{ configStore.locales.main.item.add_cart }}</div>
       </div>

@@ -1,6 +1,7 @@
 // Stores
 import { useShopStore } from "@/stores/shop"
 import { useConfigStore } from "@/stores/config"
+import { useManagerStore } from '@/stores/manager' 
 
 // Utils
 import { callback } from "@/utils/callback"
@@ -8,11 +9,16 @@ import { callback } from "@/utils/callback"
 export const useBridge = () => {
   const shopStore = useShopStore()
   const configStore = useConfigStore()
+  const managerStore = useManagerStore()
 
   const handleMessage = (event: MessageEvent) => {
     const { action, ...data } = event.data
 
     const actions: Record<string, () => void> = {
+      toggleManager: () => {
+        managerStore.showManager = !!data.showManager
+        if (data.showManager) shopStore.showShop = false
+      },
       toggleShop: async () => {
         if (data.showShop) {
           shopStore.selectedCategory = "all"

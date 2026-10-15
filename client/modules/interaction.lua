@@ -30,10 +30,16 @@ local function openShop(shopKey, shopData)
 
 	log.verbose("[openShop]", json.encode({ "Categories:", shopData.Categories, "Items:", shopData.Items }))
 
-	if shopData.Requirement.Job.required and not checkJob(shopData) then return end
-	if shopData.Requirement.License.required and not checkLicense(shopKey, shopData) then return end
-
-	openShopUI(shopKey)
+    local allowed, reason = lib.callback.await('cloud-shop:authorizeShop', false, shopKey)
+    if not allowed then
+        if reason == 'license' then
+            checkLicense(shopKey, shopData)
+        else
+            Functions.Notify.Client({ title = 'Acesso negado', description = reason == 'job' and 'Você não possui o emprego exigido.' or 'Aproxime-se da loja.', type = 'error' })
+        end
+        return
+    end
+    openShopUI(shopKey)
 end
 
 local function closeShopUI()

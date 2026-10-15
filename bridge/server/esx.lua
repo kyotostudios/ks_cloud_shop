@@ -173,3 +173,21 @@ lib.callback.register("cloud-shop:getJobData", function(source)
 	local job = xPlayer.getJob()
 	return job.name, job.grade
 end)
+
+function Bridge.AddMoney(source, accountType, amount)
+    local xPlayer = getPlayerObject(source)
+    if not xPlayer or amount <= 0 then return false end
+    local account = accountType == 'cash' and 'money' or 'bank'
+    return pcall(function() xPlayer.addAccountMoney(account, amount) end)
+end
+function Bridge.GetJob(source)
+    local player = getPlayerObject(source)
+    if not player then return nil end
+    local job = player.getJob()
+    return job.name, tonumber(job.grade) or 0
+end
+function Bridge.HasLicense(source, licenseType)
+    local result = promise.new()
+    TriggerEvent('esx_license:checkLicense', source, licenseType, function(value) result:resolve(value == true) end)
+    return Citizen.Await(result)
+end

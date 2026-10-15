@@ -2,6 +2,7 @@
 // External Libraries
 import { ref, nextTick } from "vue"
 import { Icon } from "@iconify/vue"
+import { resolveCategoryIcon } from '@/utils/categoryIcons' 
 
 // Stores
 import { useShopStore } from "@/stores/shop"
@@ -55,7 +56,8 @@ const scrollIntoView = (): void => {
         :class="{ selected: shopStore.selectedCategory === category.type }"
       >
         <div class="icon-holder">
-          <Icon :icon="category.icon" width="45%" />
+          <img v-if="resolveCategoryIcon(category.icon)" :src="resolveCategoryIcon(category.icon)" alt="" />
+          <Icon v-else :icon="category.icon" width="45%" />
         </div>
         <div class="name-holder">
           <p class="category-name">{{ category.name }}</p>
@@ -123,6 +125,11 @@ const scrollIntoView = (): void => {
     background-color: rgb(30, 30, 30);
     transition: 250ms background-color;
 
+    img {
+      width: 42.5%;
+      height: auto;
+      filter: brightness(0) invert(1);
+    }
     svg {
       width: 42.5%;
       height: auto;
@@ -149,9 +156,8 @@ const scrollIntoView = (): void => {
     .name-holder {
       background-color: rgb(255, 255, 255);
       color: rgb(0, 0, 0);
-      svg {
-        color: rgb(0, 0, 0);
-      }
+      svg { color: rgb(0, 0, 0); }
+      img { filter: brightness(0); }
     }
   }
 }
